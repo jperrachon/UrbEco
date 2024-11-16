@@ -176,7 +176,11 @@
                 parkingSpot: spot
             });
 
-            marker.bindPopup(`<b>${spot.name}</b><br>Espacios disponibles: ${spot.availableSpots}`);
+            marker.bindPopup(`
+                <b>${spot.name}</b><br>
+                Espacios disponibles: ${spot.availableSpots}<br>
+                <button class="btn btn-custom" onclick="shareLocation(${spot.lat}, ${spot.lng})">Compartir ubicación</button>
+            `);
             markers.addLayer(marker);
         });
 
@@ -231,7 +235,7 @@
                         map.setView([nearestSpot.lat, nearestSpot.lng], 18);
                         L.popup()
                             .setLatLng([nearestSpot.lat, nearestSpot.lng])
-                            .setContent(`<b>${nearestSpot.name}</b><br>Espacios disponibles: ${nearestSpot.availableSpots}`)
+                            .setContent(`<b>${nearestSpot.name}</b><br>Espacios disponibles: ${nearestSpot.availableSpots}<br><button class="btn btn-custom" onclick="shareLocation(${nearestSpot.lat}, ${nearestSpot.lng})">Compartir ubicación</button>`)
                             .openOn(map);
                     } else {
                         alert('Lo sentimos, no hay estacionamientos disponibles en este momento.');
