@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,12 +10,16 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <style>
-        html, body, #app {
+        html,
+        body,
+        #app {
             height: 100%;
         }
+
         #map {
             height: calc(100% - 136px);
         }
+
         .custom-marker {
             border-radius: 50%;
             color: white;
@@ -25,8 +30,8 @@
             width: 30px;
             height: 30px;
         }
+
         .custom-cluster {
-            background-color: rgba(74, 144, 226, 0.7);
             border-radius: 50%;
             color: white;
             font-weight: bold;
@@ -34,14 +39,43 @@
             justify-content: center;
             align-items: center;
         }
+
+        .btn-custom {
+            background: linear-gradient(to right, #a8e063, #56ab2f);
+            border: none;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .btn-custom:hover {
+            background: linear-gradient(to right, #56ab2f, #a8e063);
+        }
+
+        .form-control {
+            border-radius: 20px;
+        }
+
+        #nearest-spot-button {
+            position: absolute;
+            top: 70vh;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+
+        .rounded-circle {
+            background: linear-gradient(to right, #a8e063, #56ab2f);
+
+        }
     </style>
 </head>
+
 <body>
     <div id="app" class="d-flex flex-column">
         <header class="bg-light p-3">
             <div class="container">
                 <div class="row align-items-center">
-                    <div class="col-auto">
+                    <div class="col">
                         <div class="d-flex align-items-center">
                             <div class="bg-primary rounded-circle me-3" style="width: 40px; height: 40px;"></div>
                             <h1 class="h4 mb-0">ParkSpot Montevideo</h1>
@@ -50,14 +84,16 @@
                     <div class="col">
                         <div class="input-group">
                             <input type="text" id="search-input" class="form-control" placeholder="Buscar dirección...">
-                            <button id="search-button" class="btn btn-primary">Buscar</button>
-                            <button id="nearest-spot-button" class="btn btn-success">Estacionamiento cercano</button>
+                            <button id="search-button" class="btn btn-custom ">Buscar</button>
+
                         </div>
                     </div>
                 </div>
             </div>
         </header>
-        <div id="map"></div>
+        <div id="map">
+            <button id="nearest-spot-button" class="btn btn-custom">Estacionamiento cercano</button>
+        </div>
         <footer class="bg-light p-3 text-center">
             <p class="mb-0">Espacio para publicidad</p>
         </footer>
@@ -106,7 +142,7 @@
 
         // Creación de marcadores y clusters
         const markers = L.markerClusterGroup({
-            iconCreateFunction: function(cluster) {
+            iconCreateFunction: function (cluster) {
                 const childCount = cluster.getChildCount();
                 const totalSpots = cluster.getAllChildMarkers().reduce((total, marker) => {
                     return total + marker.options.parkingSpot.availableSpots;
@@ -167,6 +203,8 @@
             }
         });
 
+
+
         // Funcionalidad de encontrar estacionamiento cercano
         document.getElementById('nearest-spot-button').addEventListener('click', () => {
             if ('geolocation' in navigator) {
@@ -206,6 +244,24 @@
                 alert('Geolocalización no está disponible en tu navegador.');
             }
         });
+        function shareLocation(lat, lng) {
+            const url = `https://www.google.com/maps?q=${lat},${lng}`;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Ubicación de Estacionamiento',
+                    text: 'Mira este punto de estacionamiento:',
+                    url: url
+                }).then(() => {
+                    console.log('Ubicación compartida exitosamente');
+                }).catch((error) => {
+                    console.error('Error al compartir la ubicación:', error);
+                });
+            } else {
+                // Fallback para navegadores que no soportan la API de Web Share
+                prompt('Copia este enlace para compartir:', url);
+            }
+        }
     </script>
 </body>
+
 </html>
