@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,16 +9,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <style>
-        html,
-        body,
-        #app {
+        html, body, #app {
             height: 100%;
         }
-
         #map {
             height: calc(100% - 136px);
         }
-
         .custom-marker {
             border-radius: 50%;
             color: white;
@@ -30,7 +25,6 @@
             width: 30px;
             height: 30px;
         }
-
         .custom-cluster {
             border-radius: 50%;
             color: white;
@@ -39,37 +33,39 @@
             justify-content: center;
             align-items: center;
         }
-
         .btn-custom {
             background: linear-gradient(to right, #a8e063, #56ab2f);
             border: none;
             border-radius: 20px;
             color: white;
         }
-
         .btn-custom:hover {
             background: linear-gradient(to right, #56ab2f, #a8e063);
         }
-
         .form-control {
             border-radius: 20px;
         }
-
+        .rounded-circle {
+            background: linear-gradient(to right, #a8e063, #56ab2f);
+        }
+        .btn-transparent {
+            background-color: transparent;
+            border: none;
+            color: #000;
+            font-size: 24px;
+        }
+        .btn-active {
+            color: blue !important;
+        }
         #nearest-spot-button {
             position: absolute;
-            top: 70vh;
+            bottom: 75px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
         }
-
-        .rounded-circle {
-            background: linear-gradient(to right, #a8e063, #56ab2f);
-
-        }
     </style>
 </head>
-
 <body>
     <div id="app" class="d-flex flex-column">
         <header class="bg-light p-3">
@@ -84,16 +80,21 @@
                     <div class="col">
                         <div class="input-group">
                             <input type="text" id="search-input" class="form-control" placeholder="Buscar dirección...">
-                            <button id="search-button" class="btn btn-custom ">Buscar</button>
-
+                            <button id="search-button" class="btn btn-custom">Buscar</button>
                         </div>
+                    </div>
+                    <div class="col text-end">
+                        <button id="filter-disabled-button" class="btn btn-transparent">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-person-wheelchair" viewBox="0 0 16 16">
+                                <path d="M12 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3m-.663 2.146a1.5 1.5 0 0 0-.47-2.115l-2.5-1.508a1.5 1.5 0 0 0-1.676.086l-2.329 1.75a.866.866 0 0 0 1.051 1.375L7.361 3.37l.922.71-2.038 2.445A4.73 4.73 0 0 0 2.628 7.67l1.064 1.065a3.25 3.25 0 0 1 4.574 4.574l1.064 1.063a4.73 4.73 0 0 0 1.09-3.998l1.043-.292-.187 2.991a.872.872 0 1 0 1.741.098l.206-4.121A1 1 0 0 0 12.224 8h-2.79zM3.023 9.48a3.25 3.25 0 0 0 4.496 4.496l1.077 1.077a4.75 4.75 0 0 1-6.65-6.65z"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
         </header>
-        <div id="map">
-            <button id="nearest-spot-button" class="btn btn-custom">Estacionamiento cercano</button>
-        </div>
+        <div id="map"></div>
+        <button id="nearest-spot-button" class="btn btn-custom">Estacionamiento Cercano</button>
         <footer class="bg-light p-3 text-center">
             <p class="mb-0">Espacio para publicidad</p>
         </footer>
@@ -103,12 +104,6 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script>
-        // Inicialización del mapa
-        const map = L.map('map').setView([-34.9011, -56.1645], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
         // Generación de puntos de estacionamiento aleatorios
         function generateParkingSpots(count) {
             const spots = [];
@@ -124,7 +119,10 @@
                     lat,
                     lng,
                     name: `Estacionamiento ${i + 1}`,
-                    availableSpots: Math.floor(Math.random() * 10) + 1 // 1 a 10 espacios disponibles
+                    availableSpots: Math.floor(Math.random() * 10) + 1, // 1 a 10 espacios disponibles
+                    isPaid: Math.random() > 0.5, // 50% de probabilidad de ser de pago
+                    isDisabled: Math.random() > 0.8, // 20% de probabilidad de ser para discapacitados
+                    averageTime: Math.floor(Math.random() * 120) + 30 // Tiempo medio de estacionamiento entre 30 y 150 minutos
                 });
             }
 
@@ -140,51 +138,42 @@
             return '#dc3545'; // Rojo para baja disponibilidad
         }
 
-        // Creación de marcadores y clusters
-        const markers = L.markerClusterGroup({
-            iconCreateFunction: function (cluster) {
-                const childCount = cluster.getChildCount();
-                const totalSpots = cluster.getAllChildMarkers().reduce((total, marker) => {
-                    return total + marker.options.parkingSpot.availableSpots;
-                }, 0);
+        // Inicializar el mapa
+        const map = L.map('map').setView([-34.9020, -56.1635], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
-                let c = ' marker-cluster-';
-                if (totalSpots < 10) {
-                    c += 'small';
-                } else if (totalSpots < 50) {
-                    c += 'medium';
-                } else {
-                    c += 'large';
-                }
+        // Crear grupo de clústeres de marcadores
+        const markers = L.markerClusterGroup();
 
-                return new L.DivIcon({
-                    html: '<div><span>' + totalSpots + '</span></div>',
-                    className: 'custom-cluster' + c,
-                    iconSize: new L.Point(40, 40)
+        // Añadir marcadores al grupo de clústeres
+        function addMarkers(spots) {
+            markers.clearLayers();
+            spots.forEach(spot => {
+                const marker = L.marker([spot.lat, spot.lng], {
+                    icon: L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div style="background-color: ${getColorByAvailability(spot.availableSpots)}; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">${spot.availableSpots}</div>`,
+                        iconSize: [30, 30]
+                    }),
+                    title: spot.name,
+                    parkingSpot: spot
                 });
-            }
-        });
 
-        parkingSpots.forEach(spot => {
-            const marker = L.marker([spot.lat, spot.lng], {
-                icon: L.divIcon({
-                    className: 'custom-marker',
-                    html: `<div style="background-color: ${getColorByAvailability(spot.availableSpots)}; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">${spot.availableSpots}</div>`,
-                    iconSize: [30, 30]
-                }),
-                title: spot.name,
-                parkingSpot: spot
+                marker.bindPopup(`
+                    <b>${spot.name}</b><br>
+                    Espacios disponibles: ${spot.availableSpots}<br>
+                    ${spot.isDisabled ? '<span style="color: blue;">Estacionamiento para discapacitados</span><br>' : ''}
+                    ${spot.isPaid ? 'Estacionamiento de pago' : 'Estacionamiento gratuito'}
+                    <br><button class="btn btn-custom" onclick="shareLocation(${spot.lat}, ${spot.lng})">Compartir ubicación</button>
+                `);
+                markers.addLayer(marker);
             });
+            map.addLayer(markers);
+        }
 
-            marker.bindPopup(`
-                <b>${spot.name}</b><br>
-                Espacios disponibles: ${spot.availableSpots}<br>
-                <button class="btn btn-custom" onclick="shareLocation(${spot.lat}, ${spot.lng})">Compartir ubicación</button>
-            `);
-            markers.addLayer(marker);
-        });
-
-        map.addLayer(markers);
+        addMarkers(parkingSpots);
 
         // Funcionalidad de búsqueda
         document.getElementById('search-button').addEventListener('click', async () => {
@@ -202,14 +191,27 @@
                     alert('No se encontró la dirección. Por favor, intenta con una búsqueda más específica.');
                 }
             } catch (error) {
-                console.error('Error searching for address:', error);
+                console.error('Error al buscar la dirección:', error);
                 alert('Hubo un error al buscar la dirección. Por favor, inténtalo de nuevo.');
             }
         });
 
+        // Funcionalidad de filtrar estacionamientos para discapacitados
+        let isFilteringDisabled = false;
+        document.getElementById('filter-disabled-button').addEventListener('click', () => {
+            isFilteringDisabled = !isFilteringDisabled;
+            const button = document.getElementById('filter-disabled-button');
+            if (isFilteringDisabled) {
+                button.classList.add('btn-active');
+                const filteredSpots = parkingSpots.filter(spot => spot.isDisabled);
+                addMarkers(filteredSpots);
+            } else {
+                button.classList.remove('btn-active');
+                addMarkers(parkingSpots);
+            }
+        });
 
-
-        // Funcionalidad de encontrar estacionamiento cercano
+        // Funcionalidad para encontrar el estacionamiento más cercano
         document.getElementById('nearest-spot-button').addEventListener('click', () => {
             if ('geolocation' in navigator) {
                 navigator.geolocation.getCurrentPosition((position) => {
@@ -235,19 +237,21 @@
                         map.setView([nearestSpot.lat, nearestSpot.lng], 18);
                         L.popup()
                             .setLatLng([nearestSpot.lat, nearestSpot.lng])
-                            .setContent(`<b>${nearestSpot.name}</b><br>Espacios disponibles: ${nearestSpot.availableSpots}<br><button class="btn btn-custom" onclick="shareLocation(${nearestSpot.lat}, ${nearestSpot.lng})">Compartir ubicación</button>`)
+                            .setContent(`<b>${nearestSpot.name}</b><br>Espacios disponibles: ${nearestSpot.availableSpots}<br>${nearestSpot.isDisabled ? '<span style="color: blue;">Estacionamiento para discapacitados</span><br>' : ''}${nearestSpot.isPaid ? 'Estacionamiento de pago' : 'Estacionamiento gratuito'}<br><button class="btn btn-custom" onclick="shareLocation(${nearestSpot.lat}, ${nearestSpot.lng})">Compartir ubicación</button>`)
                             .openOn(map);
                     } else {
                         alert('Lo sentimos, no hay estacionamientos disponibles en este momento.');
                     }
                 }, (error) => {
-                    console.error("Error getting user location:", error);
+                    console.error("Error al obtener la ubicación del usuario:", error);
                     alert('No se pudo obtener tu ubicación. Por favor, verifica que has dado permiso de ubicación a la aplicación.');
                 });
             } else {
-                alert('Geolocalización no está disponible en tu navegador.');
+                alert('La geolocalización no está disponible en tu navegador.');
             }
         });
+
+        // Función para compartir la ubicación
         function shareLocation(lat, lng) {
             const url = `https://www.google.com/maps?q=${lat},${lng}`;
             if (navigator.share) {
@@ -267,5 +271,4 @@
         }
     </script>
 </body>
-
 </html>
